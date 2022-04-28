@@ -126,7 +126,7 @@ bool test_for_ji_calc_image()
     algoInstance.FaceInit();
     LOG(INFO) << "params----" << strIn;
     int type = check_filetype(strIn);
-    if(algoInstance.SetConfig(EMPTY_EQ_NULL(strUpdateArgs)) == false)
+    if( strUpdateArgs.size() && algoInstance.SetConfig(EMPTY_EQ_NULL(strUpdateArgs)) == false)
     {
         LOG(ERROR) << "ji_update_config error";
         return false;
