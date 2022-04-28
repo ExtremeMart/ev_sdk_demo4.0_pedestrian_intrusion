@@ -18,8 +18,9 @@ public:
     Algo();
     ~Algo();
     bool Init(const int &type = 0);
-
+    bool SetConfig(const char *args);
     bool ProcessImage(const std::string &filename, const char *args, int repeate = 0);
+    bool ProcessImages(const std::vector<std::string> &filenames, const char *args, int repeate = 0);
     bool ProcessVideo(const std::string &filename, const char *args, int repeate = 0);
     bool ProcessStream(const std::string &url);
 

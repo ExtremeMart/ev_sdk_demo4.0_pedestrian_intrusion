@@ -114,35 +114,36 @@ nvidia-docker run -itd --privileged ccr.ccs.tencentyun.com/public_images/ubuntu1
 我们按照[开发SDK的一般步骤](#jump_dev)编译并授权过后即可运行测试工具,测试工具主要提供一下几个功能
 
 ```
-        ---------------------------------
-        usage:
-        -h  --help        show help information   显示帮助信息
-        -f  --function    test function for       指定测试的功能
-                            1.ji_calc_image
-                            2.ji_calc_image_asyn
-                            3.ji_destroy_predictor
-                            4.ji_thread
-                            5.ji_get_version
-                            6.ji_insert_face
-                            7.ji_delete_face  
-        -i  --infile      source file  输入图片的地址
-        -a  --args        for example roi  指定参数
-        -o  --outfile     result file  指定输出文件名称
-        -r  --repeat      number of repetitions. default: 1 指定调用运行的次数
-                            <= 0 represents an unlimited number of times
-                            for example: -r 100
+          ---------------------------------
+          usage:
+            -h  --help        show help information
+            -f  --function    test function for 
+                              1.ji_calc_image
+                              2.ji_calc_image_asyn
+                              3.ji_destroy_predictor
+                              4.ji_thread
+                              5.ji_get_version
+                              6.ji_insert_face
+                              7.ji_delete_face
+            -i  --infile      source file
+            -a  --args        for example roi
+            -u  --args        test ji_update_config
+            -o  --outfile     result file
+            -r  --repeat      number of repetitions. default: 1
+                              <= 0 represents an unlimited number of times
+                              for example: -r 100
         ---------------------------------
 ```
 
 下面我们对部分功能进行详细的说明
-1. 测试功能, 1-4指同步调用接口, 2指异步调用接口, 3会在每次调用算法前后执行ji_create_predictor,ji_destroy_predictor接口初始化和反初始化算法,以测试SDK是否能够正确释放资源,指定功能3的时候一定要和-r参数配合使用,在运行过程中监控test-ji-api的内存占用,显存占用等是否不停的增长,5测试获取版本信息的接口.
+1. 测试功能, 1指同步调用接口, 2指异步调用接口, 3会在每次调用算法前后执行ji_create_predictor,ji_destroy_predictor接口初始化和反初始化算法,以测试SDK是否能够正确释放资源,指定功能3的时候一定要和-r参数配合使用,在运行过程中监控test-ji-api的内存占用,显存占用等是否不停的增长,5测试获取版本信息的接口.-i参数指定输入时,可以输入多张图片,直接用逗号分割.
    ```
    在/usr/local/ev_sdk/bin路径下执行测试
-    ./test-ji-api -f 1 -i ../data/persons.jpg -o result.jpg
-    ./test-ji-api -f 3 -i ../data/persons.jpg -o result.jpg -r -1 #无限循环调用
+    ./test-ji-api -f 1 -i ../data/persons.jpg,../data/persons.jpg -o result.jpg -u "{}"#输入两张图片
+    ./test-ji-api -f 3 -i ../data/persons.jpg -o result.jpg -r -1 -u "{}"#无限循环调用
     ./test-ji-api -f 5     
    ```
-2. 测试参数,算法初始化时会从配置文件中加载默认配置参数,对于部分参数通过接口可以动态覆盖默认参数,如果项目要求能够动态指定的参数,需要测试通过-a传递的参数能够生效.例如,对于本demo的配置文件如下
+2. 测试参数,算法初始化时会从配置文件中加载默认配置参数,对于部分参数通过接口可以动态覆盖默认参数,如果项目要求能够动态指定的参数,需要测试通过-u和-a传递的参数能够生效.例如,对于本demo的配置文件如下
 
     ```
    {
@@ -173,13 +174,13 @@ nvidia-docker run -itd --privileged ccr.ccs.tencentyun.com/public_images/ubuntu1
     }
     ```
 
-配置文件中的polygon_1参数和language参数需要支持动态配置,则需要利用-a参数测试
+配置文件中的polygon_1参数和language参数需要支持动态配置,则需要利用-a参数测试,-u和-a参数的区别在于-u是通过ji_update_config接口单独传递,-i是通过ji_calc_iamge的args参数传递,且在当前测试版本中-u是必选参数,如果不想通过-u传递参数,可以直接通过-u "{}"传递一个空的json.
    ```
     //未指定参数
-        ./test-ji-api -f 1 -i ../data/persons.jpg -o result.jpg
+        ./test-ji-api -f 1 -i ../data/persons.jpg -o result.jpg -u "{}"
 
     //指定参数
-        ./test-ji-api -f 1 -i ../data/persons.jpg  
+        ./test-ji-api -f 1 -i ../data/persons.jpg  -u "{}"
         -a "{\"polygon_1\": [\"POLYGON((0.2 0.2, 0.8 0, 0.8 0.8, 0 0.8))\"],\"language\":\"zh\"}"
         -o result.jpg
    ```
@@ -510,7 +511,7 @@ code: 0
 1. 输入单张图片，并调用`ji_calc_image`接口：
 
    ```shell
-   ./test-ji-api -f ji_calc_image -i /path/to/test.jpg 
+   ./test-ji-api -f ji_calc_image -i /path/to/test.jpg -u "{}"
    ```
 
 2. 输入`json`格式的`polygon_1`参数到`args`参数：
@@ -519,13 +520,14 @@ code: 0
    ./test-ji-api \
    -f ji_calc_image \
    -i /path/to/test.jpg \
+   -u "{}" \
    -a '{"polygon_1":["POLYGON((0.2 0.2,0.7 0.13,0.9 0.7,0.4 0.9,0.05 0.8,0.2 0.25))"]}'
    ```
 
 3. 保存输出图片：
 
    ```shell
-   ./test-ji-api -f ji_calc_image -i /path/to/test.jpg -o /path/to/out.jpg
+   ./test-ji-api -f ji_calc_image -i /path/to/test.jpg -u "{}" -o /path/to/out.jpg
    ```
 
 更多选项，请参考`test-ji-api --help`
