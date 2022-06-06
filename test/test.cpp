@@ -1,12 +1,11 @@
 #include <getopt.h>
 #include <dirent.h>
-
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <fstream>
 #include <chrono>
-
-
+#include <sys/stat.h>
 #include <opencv2/opencv.hpp>
 #include <glog/logging.h>
 
@@ -35,12 +34,20 @@ enum class CMD{
 
 int check_filetype(const string &filename)
 {
-    int filetype = 0; //0:image; 1:video
+    int filetype = -1; //0:image; 1:video; 2:folder
 
     std::size_t found = filename.rfind('.');
     if (found != std::string::npos)
     {
-        string strExt = filename.substr(found);
+        string strExt = filename.substr(found);        
+        std::transform(strExt.begin(), strExt.end(), strExt.begin(), ::tolower);
+        if (strExt.compare(".jpg") == 0 ||
+            strExt.compare(".jpeg") == 0 ||
+            strExt.compare(".png") == 0 ||
+            strExt.compare(".bmp") == 0 )
+        {
+            filetype = 0;
+        }
         if (strExt.compare(".mp4") == 0 ||
             strExt.compare(".avi") == 0 ||
             strExt.compare(".flv") == 0 ||
@@ -49,6 +56,13 @@ int check_filetype(const string &filename)
             strExt.compare(".rmvb") == 0)
         {
             filetype = 1;
+        }
+
+        struct stat buff;
+        int result = stat(filename.c_str(), &buff);
+        if( (result == 0) && buff.st_mode )
+        {
+            filetype = 2;
         }
     }
 
@@ -146,11 +160,37 @@ bool test_for_ji_calc_image()
     {
         algoInstance.ProcessImage(strIn, EMPTY_EQ_NULL(strArgs), repeats);
     }
-    else
+    else if (type == 1)
     {
         algoInstance.ProcessVideo(strIn, EMPTY_EQ_NULL(strArgs), repeats);
     }
-
+    else if (type == 2)
+    {
+        DIR *pDir;
+        struct dirent* ptr;
+        if( !(pDir = opendir(strIn.c_str())) )
+        {
+            LOG(ERROR) << "path not exists : " << strIn;
+            return false;
+        }        
+        while( (ptr = readdir(pDir))!=0 )
+        {
+            if(check_filetype(ptr->d_name) == 0)
+            {
+                std::string filename = strIn;
+                if( filename[filename.size()-1] != '/')
+                {
+                    filename = filename +'/';
+                }
+                filename = filename + ptr->d_name;
+                LOG(INFO) << "process image : " << filename;
+                size_t sep = filename.rfind('.');
+                std::string outname = filename.substr(0,sep) + "_result" + filename.substr(sep);
+                algoInstance.SetOutFileName(outname);
+                algoInstance.ProcessImage(filename, EMPTY_EQ_NULL(strArgs), repeats);
+            }
+        }        
+    }
     return true;
 }
 
