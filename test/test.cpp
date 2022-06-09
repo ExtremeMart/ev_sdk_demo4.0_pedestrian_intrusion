@@ -60,7 +60,7 @@ int check_filetype(const string &filename)
 
         struct stat buff;
         int result = stat(filename.c_str(), &buff);
-        if( (result == 0) && buff.st_mode )
+        if( (result == 0) && (buff.st_mode&S_IFMT) == S_IFDIR)
         {
             filetype = 2;
         }
