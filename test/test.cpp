@@ -46,6 +46,7 @@ int check_filetype(const string &filename)
             strExt.compare(".png") == 0 ||
             strExt.compare(".bmp") == 0 )
         {
+            LOG(INFO) << "file type is " << 0;
             filetype = 0;
         }
         if (strExt.compare(".mp4") == 0 ||
@@ -55,15 +56,17 @@ int check_filetype(const string &filename)
             strExt.compare(".wmv") == 0 ||
             strExt.compare(".rmvb") == 0)
         {
+            LOG(INFO) << "file type is " << 1;
             filetype = 1;
-        }
+        }        
+    }
 
-        struct stat buff;
-        int result = stat(filename.c_str(), &buff);
-        if( (result == 0) && (buff.st_mode&S_IFMT) == S_IFDIR)
-        {
-            filetype = 2;
-        }
+    struct stat buff;
+    int result = stat(filename.c_str(), &buff);
+    if( (result == 0) && (buff.st_mode&S_IFMT) == S_IFDIR)
+    {
+        LOG(INFO) << "file type is " << 2;
+        filetype = 2;
     }
 
     return filetype;
@@ -130,8 +133,6 @@ std::vector<std::string> num_pictures(const std::string & aStrIn)
     return vecStrParams;
 }
 
-
-
 bool test_for_ji_calc_image()
 {
     Algo algoInstance;
@@ -172,7 +173,8 @@ bool test_for_ji_calc_image()
         {
             LOG(ERROR) << "path not exists : " << strIn;
             return false;
-        }        
+        }      
+        std::vector<std::string>  vecImgNames{}; 
         while( (ptr = readdir(pDir))!=0 )
         {
             if(check_filetype(ptr->d_name) == 0)
@@ -183,13 +185,17 @@ bool test_for_ji_calc_image()
                     filename = filename +'/';
                 }
                 filename = filename + ptr->d_name;
-                LOG(INFO) << "process image : " << filename;
-                size_t sep = filename.rfind('.');
-                std::string outname = filename.substr(0,sep) + "_result" + filename.substr(sep);
-                algoInstance.SetOutFileName(outname);
-                algoInstance.ProcessImage(filename, EMPTY_EQ_NULL(strArgs), repeats);
+                vecImgNames.push_back(filename);                
             }
-        }        
+        }
+        for(auto &filename: vecImgNames)        
+        {
+            LOG(INFO) << "process image : " << filename;
+            size_t sep = filename.rfind('.');
+            std::string outname = filename.substr(0,sep) + "_result" + filename.substr(sep);
+            algoInstance.SetOutFileName(outname);
+            algoInstance.ProcessImage(filename, EMPTY_EQ_NULL(strArgs), repeats);
+        }
     }
     return true;
 }
