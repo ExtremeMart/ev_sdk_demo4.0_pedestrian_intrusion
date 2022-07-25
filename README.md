@@ -135,25 +135,47 @@ nvidia-docker run -itd --privileged ccr.ccs.tencentyun.com/public_images/ubuntu1
         ---------------------------------
 ```
 
-下面我们对部分功能进行详细的说明
-1. 测试功能, 1指同步调用接口, 2指异步调用接口, 3会在每次调用算法前后执行ji_create_predictor,ji_destroy_predictor接口初始化和反初始化算法,以测试SDK是否能够正确释放资源,指定功能3的时候一定要和-r参数配合使用,在运行过程中监控test-ji-api的内存占用,显存占用等是否不停的增长,5测试获取版本信息的接口. -i参数指定输入时,可以传递单张图片，也可以输入多张图片,直接用逗号分割(**!!!多张图片是指sdk一次调用ji_calc_image传入的图片数量不是指多次调用，每次传入一张图片**),该参数也可以传递一个文件夹，测试工具会自动分析文件夹中的每一张图片，结果图片会保存在原图片文件的同一路径下，结果文件名和原文件名一一对应(名称中添加了result字段)．
-   ```
-   在/usr/local/ev_sdk/bin路径下执行测试
-    ./test-ji-api -f 1 -i ../data/persons.jpg -o result.jpg #输入单张图片
-    ./test-ji-api -f 1 -i ../data/persons.jpg,../data/persons.jpg -o result.jpg #输入两张图片
-    ./test-ji-api -f 1 -i ../data/persons.jpg,../data/ #输入文件夹
-    ./test-ji-api -f 3 -i ../data/persons.jpg -o result.jpg -r -1 #无限循环调用
-    ./test-ji-api -f 5     
-   ```
-   图片列表文件格式如下
-   ```   
-   /usr/local/ev_sdk/data/a.jpg
-   /usr/local/ev_sdk/data/b.jpg
-   /usr/local/ev_sdk/data/c.jpg
-   ```
-2. 测试参数,算法初始化时会从配置文件中加载默认配置参数,对于部分参数通过接口可以动态覆盖默认参数,如果项目要求能够动态指定的参数,需要测试通过-u和-a传递的参数能够生效.例如,对于本demo的配置文件如下
+下面我们对部分功能进行详细的说明(未说明的参数暂未实现)
 
+1. 指定调用功能的-f参数
+    1. -f 1指调用算法同步分析接口，调用该接口时主要支持如下几种输入方式:
+
+    ```"shell"
+        1.输入单张图片，需要指定输入输出文件
+        　　./test-ji-api -f 1 -i ../data/persons.jpg -o result.jpg
+        
+        2.输入多张图片(多张图片是指sdk一次调用ji_calc_image传入的图片数量不是指多次调用，每次传入一张图片)，需要指定输入输出文件
+            　./test-ji-api -f 1 -i ../data/persons.jpg,../data/persons.jpg -o result.jpg #输入两张图片
+        
+        3.输入视频，需要指定输入输出文件
+        　　./test-ji-api -f 1 -i ../data/test.mp4 -o test_result.mp4 
+
+        4.输入图片文件夹，只需指定输入文件夹即可，结果图片会保存在原图片文件的同一路径下，结果文件名和原文件名一一对应(名称中添加了result字段)
+        　　　./test-ji-api -f 1 -i ../data/　
+             图片列表文件格式如下:   
+                /usr/local/ev_sdk/data/a.jpg
+                /usr/local/ev_sdk/data/b.jpg
+                /usr/local/ev_sdk/data/c.png   
     ```
+
+    2. -f 3指调用算法实例创建释放接口，该接口需要与-r参数配合使用，测试在循环创建/调用/释放的过程中是否存在内存/显存的泄露，与调用-f 1的区别在于，当-r参数指定调用次数时，-f 1只会创建一次实例，释放一次实例．
+
+    ```'shell'
+        ./test-ji-api -f 3 -i ../data/persons.jpg -o result.jpg -r -1 #无限循环调用
+
+        ./test-ji-api -f 3 -i ../data/persons.jpg -o result.jpg -r 100 #循环调用100次
+    ```
+
+    3. -f 5获取并打印算法的版本信息．
+
+    ```'shell'
+        ./test-ji-api -f 5
+    ```
+2. 指定输入的-i参数，使用方式见上文介绍.
+3. 指定输出的-o参数，使用方式见上文介绍. 
+4. 指定配置的-u/-a参数,算法初始化时会从配置文件中加载默认配置参数,对于部分参数通过接口可以动态覆盖默认参数,如果项目要求能够动态指定的参数,需要测试通过-u和-a传递的参数能够生效.例如,对于本demo的配置文件如下
+
+    ```"json"
    {
     "draw_roi_area": true,    
     "roi_type": "polygon_1",
@@ -183,7 +205,8 @@ nvidia-docker run -itd --privileged ccr.ccs.tencentyun.com/public_images/ubuntu1
     ```
 
 配置文件中的polygon_1参数和language参数需要支持动态配置,则需要利用-a和-u参数测试,-u和-a参数的区别在于-u是通过ji_update_config接口单独传递,-i是通过ji_calc_iamge的args参数传递.
-   ```
+
+```"shell"
     //-u未指定参数
         ./test-ji-api -f 1 -i ../data/persons.jpg 
          -u "{\"polygon_1\": [\"POLYGON((0.2 0.2, 0.8 0, 0.8 0.8, 0 0.8))\"],\"language\":\"zh\"}"
@@ -193,7 +216,8 @@ nvidia-docker run -itd --privileged ccr.ccs.tencentyun.com/public_images/ubuntu1
         ./test-ji-api -f 1 -i ../data/persons.jpg  
         -a "{\"polygon_1\": [\"POLYGON((0.2 0.2, 0.8 0, 0.8 0.8, 0 0.8))\"],\"language\":\"zh\"}"
         -o result.jpg
-   ```
+```
+
 以下为默认参数的输出效果  
 
 ![alt 默认参数](doc/figure1.jpg)
